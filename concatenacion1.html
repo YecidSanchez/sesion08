@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<!--
+Computación Gráfica:	Parcial primer corte
+Por: 					Yecid Yamid Sánchez León
+Dirigido a: 			Héctor Murcia Forero
+-->
+<html>
+    <head>
+        <title>Concatenación</title>
+        <style>
+            html, body { margin: 0; padding: 0; overflow: hidden; }
+            /*
+			Atributos CSS para el id="info".
+            */
+            #info {
+                position: absolute;
+                padding: 10px;
+                width: 100%;
+                text-align: center;
+                color: #FFFFFF;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="info">Concatenación de transformaciones<br/><br/>
+            Comienza con un cubo de lado uno centrado en el origen de coordenadas, tal y como se muestra en la figura (a). Usa dos cubos más como este y obtén el modelo que se muestra en la figura (b), donde cada nuevo cubo tiene una longitud del lado la mitad de la del cubo anterior. Detalla las transformaciones utilizadas.<br/>
+        </div>
+    <!-- Importación de la librería Three.js. -->   
+    <script src="js/three.min.js"></script>
+    <script>
+    	//Creación de las variables escena, aspecto, cámara y render.
+		var scene, aspect, camera, renderer;
+		var geometry;
+		var object;
+		var startTime = Date.now();
+		
+		//Creación de las variables que me permitirán acceder a la funcionalidad del teclado
+		var upArrow = false;
+		var downArrow = false;
+		var leftArrow = false;
+		var rightArrow = false;
+		var scaleUp = false;
+		var scaleDown = false;
+		var xAxis = true;
+		var yAxis = false;
+		var zAxis = false;
+		
+		//Declaración de las funciones de inicialización y animación.
+		init();
+		animate();
+	
+		function init(){
+			scene = new THREE.Scene();
+			aspect = window.innerWidth / window.innerHeight;
+			camera = new THREE.PerspectiveCamera( 45, aspect, 0.1, 1000);
+			renderer = new THREE.WebGLRenderer();
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			document.body.appendChild( renderer.domElement );
+				  			
+			//Sentencia Switch para la Traslación, Rotación y Escalado en el caso TRUE.
+			var onKeyDown = function ( event ) {
+				switch ( event.keyCode ) {
+					//Traslación en sentido +Y.
+					case 38:
+						upArrow = true;
+						break;
+					//Traslación en sentido -Y.
+					case 40:
+						downArrow = true;
+						break;
+					//Escalado: Aumentar de tamaño.
+					case 83:
+						scaleUp = true;
+						break;
+					//Escalado: Disminuir de tamaño.
+					case 87:
+						scaleDown = true;
+						break;
+					//Rotación: Hacia atrás.
+					case 37:
+						leftArrow = true;
+						break;
+					//Rotación: Hacia adelante.
+					case 39:
+						rightArrow = true;
+						break;
+					//Rotación: Seleccionar el eje X.
+					case 88:
+						yAxis = false;
+						zAxis = false;
+						xAxis = true;
+						break;
+					//Rotación: Seleccionar el eje Y.
+					case 89:
+						xAxis = false;
+						zAxis = false;
+						yAxis = true;
+						break;
+					//Rotación: Seleccionar el eje Z.
+					case 90:
+						xAxis = false;
+						yAxis = false;
+						zAxis = true;
+						break;
+				}
+			};	  
+
+		  	//Sentencia Switch para la Traslación, Rotación y Escalado en el caso FALSE.
+			var onKeyUp = function ( event ) {
+				switch ( event.keyCode ) {
+					//Traslación en sentido +Y.
+					case 38:
+						upArrow = false;
+						break;
+					//Traslación en sentido -Y.
+					case 40:
+						downArrow = false;
+						break;
+					//Rotación: Hacia atrás.
+					case 37:
+						leftArrow = false;
+						break;
+					//Rotación: Hacia adelante.
+					case 39:
+						rightArrow = false;
+						break;
+					//Escalado: Aumentar de tamaño.
+					case 83:
+						scaleUp = false;
+						break;
+					//Escalado: Disminuir de tamaño.
+					case 87:
+						scaleDown = false;
+						break;
+				}
+			};	  	
+			
+			//Sentencia que notifica al navegador la interacción del usuario.
+				//keydown: El usuario presiona una tecla.
+				//keyup: El usuario libera la tecla.
+			document.addEventListener( 'keydown', onKeyDown, false );
+			document.addEventListener( 'keyup', onKeyUp, false );
+			
+			//ELEMENTOS DE ESCENA 
+			var size = 10;
+			var arrowSize = 1;
+			var divisions = size;
+			//Vector unitario y punto de origen.
+			var origin = new THREE.Vector3( 0, 0, 0 );
+			var x = new THREE.Vector3( 1, 0, 0 );
+			var y = new THREE.Vector3( 0, 1, 0 );
+		  	var z = new THREE.Vector3( 0, 0, 1 );
+		  	//color1: Para las grillas.
+			var color1 = new THREE.Color( 0xFFFFFF );
+			//color2: Para el fondo del escenario.
+		  	var color2 = new THREE.Color( 0x333333 );
+		  	//colorR, colorG, colorB: Para las Flechas de Coordenadas.
+		  	var colorR = new THREE.Color( 0xAA0000 );
+		  	var colorG = new THREE.Color( 0x00AA00 );
+		  	var colorB = new THREE.Color( 0x0000AA );
+		  	//Colores de las caras del objeto 3D.
+			var colorRd = new THREE.Color( 0xCE3A22 );
+		  	var colorGd = new THREE.Color( 0xFDC519 );
+		  	var colorBd = new THREE.Color( 0x222C56 );
+		  
+		  	//Creación de las grillas del escenario.
+		  	var axesHelper = new THREE.AxesHelper( size );
+		  	var gridHelperXY = new THREE.GridHelper( size, divisions, color1, color1);
+		  	var gridHelperXZ = new THREE.GridHelper( size, divisions, color2, color2 );
+		  	var gridHelperYZ = new THREE.GridHelper( size, divisions, color2, color2 );
+            
+            //Creación de las Flechas de Coordenadas.
+            var arrowX = new THREE.ArrowHelper( x, origin, arrowSize, colorR );
+            var arrowY = new THREE.ArrowHelper( y, origin, arrowSize, colorG );
+            var arrowZ = new THREE.ArrowHelper( z, origin, arrowSize, colorB );
+			
+			//Cración de cada una de las caras del cubo.
+			geometry = new THREE.BoxGeometry( 1, 1, 1 );
+			for ( var i = 0; i < geometry.faces.length; i ++ ) {
+				switch(i){
+					case 0: case 1: geometry.faces[ i ].color = colorRd; break;
+					case 2: case 3: geometry.faces[ i ].color = colorRd; break;
+					case 4: case 5: geometry.faces[ i ].color = colorGd; break;
+					case 6: case 7: geometry.faces[ i ].color = colorGd; break;
+					case 8: case 9: geometry.faces[ i ].color = colorBd; break;
+					case 10: case 11: geometry.faces[ i ].color = colorBd; break;
+				}				
+			}
+			
+			//Creación de los materiales del Objeto 3D.
+			var material = new THREE.MeshBasicMaterial( { color: color1, vertexColors: THREE.FaceColors } );
+			
+			//Creación del objeto.
+			object = new THREE.Mesh( geometry, material );
+									
+		  	//Agregamos el OBJETO 3D a la escena.
+            scene.add( gridHelperXZ );
+		  	scene.add( arrowX );	
+		  	scene.add( arrowY );	
+		  	scene.add( arrowZ );	
+			scene.add( object );
+			
+			//Posicionamiento de la cámara.
+			camera.position.x = 5;
+			camera.position.y = 10;	 
+		  	camera.position.z = 10;			
+		  	camera.lookAt( origin );
+			}
+    		
+    		//Definición de la función de animación.
+		    function animate() {
+		        render();
+		        requestAnimationFrame( animate );
+		    }
+    		
+    		//Definición de la función de renderizado.
+		    function render(){
+		        var dtime = Date.now()-startTime;
+		        //Variables para traslacion.
+				var tx = 0, ty = 0, tz = 0;
+				//Variable para escalado.	
+				var sc = 1;		
+				//Variable para ángulo de rotación.		
+				var theta = 0;			
+				
+				//Condicionales para asignar los valores según la interacción del usuario.
+				if(upArrow) {
+					tx=0; ty=0.1; tz=0;
+				}
+				if(downArrow) {
+					tx=0; ty=-0.1; tz=0;
+				}
+				if(scaleUp){
+					sc = 1.1;
+				}
+				if(scaleDown){
+					sc = .9;
+				}
+				if(rightArrow){
+					theta = .1;
+				}
+				if(leftArrow){
+					theta = -.1;
+				}
+				
+				//Matriz de Traslación:
+				//Desplazamos un punto p = (px, py, pz) mediante un vector t = (tx, ty, tz).
+				//De manera que obtengamos el nuevo punto q = (qx, qy, qz)
+				var t = new THREE.Matrix4();
+				t.set( 	1, 0, 0, tx,
+						0, 1, 0, ty, 
+						0, 0, 1, tz,
+						0, 0, 0, 1	);
+				object.applyMatrix(t);
+				
+				//Matriz de Escalado:
+				//Multiplicamos el punto p = (px, py, pz) con los factores sc = (sx, sy ,sz).
+				//Como la escala es uniforme, sc tiene valores iguales.
+				var s = new THREE.Matrix4();
+				s.set( 	sc, 0, 0, 0,
+						0, sc, 0, 0, 
+						0, 0, sc, 0,
+						0, 0, 0, 1	);	
+				object.applyMatrix(s);
+				
+				//Matriz de Rotación:
+				//Giramos un punto con un ángulo φ alrededor de un eje, y las representaciones 
+				//matriciales con coordenadas homogéneas para los casos en los que el eje de
+				//giro coincida con uno de los ejes del sistema de coordenadas.
+				var ct = Math.cos(theta);
+				var st = Math.sin(theta);
+				var r = new THREE.Matrix4();
+
+				////Matriz de Rotación: Eje X.
+				if(xAxis){
+					r.set( 	1,  0,  0, 0,
+							0, ct,-st, 0, 
+							0, st, ct, 0,
+							0,  0,  0, 1 );		
+				}
+
+				////Matriz de Rotación: Eje Y.
+				else if(yAxis){
+					r.set( 	ct, 0, st, 0,
+							 0, 1,  0, 0, 
+						   -st, 0, ct, 0,
+							 0, 0,  0, 1 );		
+				}
+
+				//Matriz de Rotación: Eje Z.
+				else if (zAxis){
+					r.set( 	ct,-st, 0, 0,
+						    st, ct, 0, 0, 
+							 0,  0, 1, 0,
+							 0,  0, 0, 1 );		
+				}	
+				object.applyMatrix(r);
+				object.elementsNeedUpdate = true;
+		        camera.lookAt( 0, 0, 0 );
+		        renderer.render( scene, camera );
+		    }
+    </script>
+  </body>
+<!--
+Computación Gráfica:	Parcial primer corte
+Por: 					Yecid Yamid Sánchez León
+Dirigido a: 			Héctor Murcia Forero
+Créditos adicionales:	JavaScript xdiseñadores (http://bit.ly/3uUXQFK)
+						avilagab (http://bit.ly/3rusaVD)
+						Informática Gráfica, José Ribelles & Ángeles López
+-->
+</html>
